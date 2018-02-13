@@ -1,36 +1,12 @@
 import React, { Component } from 'react';
-import styled from 'styled-components'
-import TwilioVideo from 'twilio-video'
-
-/* *** LIB **/
-// Attach the Tracks to the DOM.
-const attachTracks = (tracks, container) => {
-  tracks.forEach((track) => {
-    container.appendChild(track.attach());
-  });
-}
-
-// Attach the Participant's Tracks to the DOM.
-const attachParticipantTracks = (participant, container) => {
-  let tracks = Array.from(participant.tracks.values());
-  attachTracks(tracks, container);
-}
-
-// Detach the Tracks from the DOM.
-const detachTracks = (tracks) => {
-  tracks.forEach(function(track) {
-    track.detach().forEach(function(detachedElement) {
-      detachedElement.remove();
-    });
-  });
-}
-
-// Detach the Participant's Tracks from the DOM.
-const detachParticipantTracks = (participant) => {
-  var tracks = Array.from(participant.tracks.values());
-  detachTracks(tracks);
-}
-/* **** */
+import styled from 'styled-components';
+import TwilioVideo from 'twilio-video';
+import {
+  attachTracks,
+  attachParticipantTracks,
+  detachTracks,
+  detachParticipantTracks
+} from './twilio-tracks';
 
 const Main = styled.div`
   display: flex;

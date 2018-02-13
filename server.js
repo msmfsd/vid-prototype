@@ -1,16 +1,24 @@
+import mongoose from 'mongoose';
 import http from 'http';
 import path from 'path';
 import twilio from 'twilio';
 import express from 'express';
 import dotenv from 'dotenv'
+import {startDatabase, initDatabase} from './server/db'
 import randomName from './randomname';
 
+// init
 dotenv.load();
 
+// Twilio
 const AccessToken = twilio.jwt.AccessToken;
 const VideoGrant = AccessToken.VideoGrant;
 const app = express();
 const port = process.env.PORT || 5000;
+
+// init db
+startDatabase()
+app.use(initDatabase)
 
 /**
  * Generate an Access Token for a chat application user - it generates a random
