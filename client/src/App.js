@@ -70,7 +70,15 @@ class App extends Component {
 
   componentDidMount() {
     // get logged in user
-    this.getCurrentUser();
+    const currentUserId = this.getCurrentUser();
+
+    // get user details
+    this.getUserById(currentUserId)
+      .then(res => {
+        console.log('getUserById', res);
+      })
+      .catch(err => console.log(err));
+
     // consults
     this.apiGetConsults()
       .then(res => {
@@ -95,8 +103,14 @@ class App extends Component {
 
   getCurrentUser = () => {
     const url = new URL(window.location.href);
-    const user = url.searchParams.get("user");
-    console.log(user);
+    return url.searchParams.get("user");
+  }
+
+  getUserById = async (id) => {
+    const response = await fetch(`/api/user/${id}`);
+    const body = await response.json();
+    if (response.status !== 200) throw Error(body.message);
+    return body;
   }
 
   apiGetConsults = async () => {

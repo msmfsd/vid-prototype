@@ -9,3 +9,13 @@ export const getUsers = (req, res) => {
    res.status(200).json(users);
  });
 }
+
+export const getUserById = (req, res) => {
+  var id = req.params.id.toString();
+  User.findById(id, (err, user) => {
+    if (err) throw err;
+    if (!user) { return res.status(500).send('No user found'); }
+    // response
+    res.status(200).json(user);
+  });
+}

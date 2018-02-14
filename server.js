@@ -5,8 +5,8 @@ import twilio from 'twilio';
 import express from 'express';
 import dotenv from 'dotenv'
 import {startDatabase, initDatabase} from './server/db';
-import {getUsers} from './server/routes/User'
-import {getConsults} from './server/routes/Consult'
+import {getUsers, getUserById} from './server/routes/User'
+import {getConsults, getConsultById} from './server/routes/Consult'
 import randomName from './randomname';
 
 // init
@@ -24,8 +24,10 @@ app.use(initDatabase);
 
 // users
 app.get('/api/users', getUsers);
+app.get('/api/user/:id', getUserById);
 // consults
 app.get('/api/consults', getConsults);
+app.get('/api/consult/:id', getConsultById);
 
 /**
  * Generate an Access Token for a chat application user - it generates a random
