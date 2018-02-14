@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-import User from './User'
-import Consult from './Consult'
+import User from './models/User'
 
 export const startDatabase = () => {
   mongoose.connect(process.env.MONGODB || process.env.MONGOLAB_URI);
@@ -15,15 +14,15 @@ export const startDatabase = () => {
 export const initDatabase = (req, res, next) => {
   User.findOne({ username: 'drblah@email.com.au' }, (err, user) => {
     if (err) throw err;
-    // if no users found create default user w dummy data
+    // if no users found create default users w dummy data
     if (!user) {
-      var defaultUser1 = new User({
-        username: 'drblah@email.com.au',
-        name: 'Doctor Blah',
-      });
-      defaultUser1.save((err) => {
-        // send response
-        if (err) { console.log(`Error: ${err}`); }
+      const defaultUsers = [
+        { username: 'drblah@email.com.au', name: 'Doctor Blah', role: 'Doctor' },
+        { username: 'patient1@email.com.au', name: 'Patient One', role: 'Patient' },
+        { username: 'patient2@email.com.au', name: 'Patient Two', role: 'Patient' },
+      ];
+      User.insertMany(defaultUsers, (err, docs) => {
+        if (err) throw err;
         else { next(); }
       });
     }

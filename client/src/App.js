@@ -69,7 +69,17 @@ class App extends Component {
   };
 
   componentDidMount() {
-    this.callApi()
+    // get logged in user
+    this.getCurrentUser();
+    // consults
+    this.apiGetConsults()
+      .then(res => {
+        console.log('apiGetConsults', res);
+      })
+      .catch(err => console.log(err));
+
+    // twilio token
+    this.apiGetToken()
       .then(res => {
         this.setState({
           identity: res.identity,
@@ -83,7 +93,20 @@ class App extends Component {
     if (this.state.activeRoom) this.state.activeRoom.disconnect();
   }
 
-  callApi = async () => {
+  getCurrentUser = () => {
+    const url = new URL(window.location.href);
+    const user = url.searchParams.get("user");
+    console.log(user);
+  }
+
+  apiGetConsults = async () => {
+    const response = await fetch('/api/consults');
+    const body = await response.json();
+    if (response.status !== 200) throw Error(body.message);
+    return body;
+  }
+
+  apiGetToken = async () => {
     const response = await fetch('/api/token');
     const body = await response.json();
     if (response.status !== 200) throw Error(body.message);

@@ -4,7 +4,9 @@ import path from 'path';
 import twilio from 'twilio';
 import express from 'express';
 import dotenv from 'dotenv'
-import {startDatabase, initDatabase} from './server/db'
+import {startDatabase, initDatabase} from './server/db';
+import {getUsers} from './server/routes/User'
+import {getConsults} from './server/routes/Consult'
 import randomName from './randomname';
 
 // init
@@ -17,8 +19,13 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // init db
-startDatabase()
-app.use(initDatabase)
+startDatabase();
+app.use(initDatabase);
+
+// users
+app.get('/api/users', getUsers);
+// consults
+app.get('/api/consults', getConsults);
 
 /**
  * Generate an Access Token for a chat application user - it generates a random
