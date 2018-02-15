@@ -3,10 +3,11 @@ import http from 'http';
 import path from 'path';
 import twilio from 'twilio';
 import express from 'express';
+import bodyParser from 'body-parser'
 import dotenv from 'dotenv'
 import {startDatabase, initDatabase} from './server/db';
 import {getUsers, getUserById} from './server/routes/User'
-import {getConsults, getConsultById} from './server/routes/Consult'
+import {getConsults, getConsultById, updateConsultStatusById} from './server/routes/Consult'
 import randomName from './randomname';
 
 // init
@@ -21,6 +22,7 @@ const port = process.env.PORT || 5000;
 // init db
 startDatabase();
 app.use(initDatabase);
+app.use(bodyParser.json());
 
 // users
 app.get('/api/users', getUsers);
@@ -28,6 +30,7 @@ app.get('/api/user/:id', getUserById);
 // consults
 app.get('/api/consults', getConsults);
 app.get('/api/consult/:id', getConsultById);
+app.put('/api/consult/:id', updateConsultStatusById);
 
 /**
  * Generate an Access Token for a chat application user - it generates a random

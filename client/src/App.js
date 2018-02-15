@@ -66,26 +66,28 @@ class App extends Component {
     identity: null,
     token: null,
     roomName: null,
+    userDetails: null,
+    userConsults: null,
   };
 
   componentDidMount() {
     // get logged in user
     const currentUserId = this.getCurrentUser();
-
     // get user details
     this.getUserById(currentUserId)
-      .then(res => {
-        console.log('getUserById', res);
+      .then(user => {
+        const id = user._id;
+        this.apiGetConsults()
+          .then(consults => {
+            const userConsults = consults.filter(obj => user.role === 'Doctor' ? obj.doctorId === id : obj.patientId === id)
+            this.setState({
+              userDetails: user,
+              userConsults: userConsults,
+            });
+          })
+          .catch(err => console.log(err));
       })
       .catch(err => console.log(err));
-
-    // consults
-    this.apiGetConsults()
-      .then(res => {
-        console.log('apiGetConsults', res);
-      })
-      .catch(err => console.log(err));
-
     // twilio token
     this.apiGetToken()
       .then(res => {
@@ -107,21 +109,43 @@ class App extends Component {
   }
 
   getUserById = async (id) => {
-    const response = await fetch(`/api/user/${id}`);
+    const opts = { method: 'get' };
+    const response = await fetch(`/api/user/${id}`, opts);
     const body = await response.json();
     if (response.status !== 200) throw Error(body.message);
     return body;
   }
 
   apiGetConsults = async () => {
-    const response = await fetch('/api/consults');
+    const opts = { method: 'get' };
+    const response = await fetch('/api/consults', opts);
+    const body = await response.json();
+    if (response.status !== 200) throw Error(body.message);
+    return body;
+  }
+
+  updateConsultStatus = async (id, status) => {
+    /*
+      this.updateConsultStatus(myConsults[2]._id, 'COMPLETED')
+        .then(result => {
+          console.log('update consult result', result);
+        })
+        .catch(err => console.log(err))
+    */
+    const opts = {
+      method: 'put',
+      headers: { 'Content-type': 'application/json' },
+      body: JSON.stringify({status: status})
+    };
+    const response = await fetch(`/api/consult/${id}`, opts);
     const body = await response.json();
     if (response.status !== 200) throw Error(body.message);
     return body;
   }
 
   apiGetToken = async () => {
-    const response = await fetch('/api/token');
+    const opts = { method: 'get' };
+    const response = await fetch('/api/token', opts);
     const body = await response.json();
     if (response.status !== 200) throw Error(body.message);
     return body;
@@ -191,12 +215,12 @@ class App extends Component {
     });
   }
 
-  beginConsult = (event) => {
-    event.preventDefault();
-    const {previewTracks, token} = this.state
-    const roomName = 'consultation1'
+  beginConsult = (consultId) => {
+    //event.preventDefault();
+    const {previewTracks, token} = this.state;
+    const roomName = `room-${consultId}`;
 
-    this.setState({ roomName: roomName })
+    this.setState({ roomName: roomName });
     console.log("Joining room '" + roomName + "'...");
 
     const connectOptions = {
@@ -217,13 +241,48 @@ class App extends Component {
     });
   }
 
-  endConsult = (event) => {
-    event.preventDefault();
+  endConsult = () => {
+    //event.preventDefault();
     console.log('Leaving room...');
     this.state.activeRoom.disconnect();
   }
 
+  renderDoctor = (userConsults) => {
+    let nodes = (<p>Loading doctor consults..</p>);
+    if (userConsults.length) {
+      nodes = userConsults.map(consult =>
+        (<h2 key={consult._id}>
+          Consult with patient {consult.patientId} | status {consult.status}:
+          <Button
+            disabled={consult.status !== ('SCHEDULED' || 'ACTIVE')}
+            onClick={() => {
+              this.beginConsult(consult._id)
+            }}
+            >{consult.status === 'SCHEDULED' ? 'Begin consult' : 'End consult'}</Button>
+        </h2>));
+    }
+    return nodes;
+  }
+
+  renderPatient = (userConsults) => {
+    let nodes = (<p>Loading patient consults..</p>);
+    if (userConsults.length) {
+      nodes = userConsults.map(consult =>
+        (<h2 key={consult._id}>
+          Consult with doctor {consult.doctorId} | status {consult.status}:
+          <Button
+            disabled={consult.status !== 'ACTIVE'}
+            onClick={() => {
+              this.beginConsult(consult._id)
+            }}
+            >Join consult</Button>
+        </h2>));
+    }
+    return nodes;
+  }
+
   render() {
+    console.log(this.state);
     return (
       <Main>
         <Videos>
@@ -231,8 +290,13 @@ class App extends Component {
           <OutGoingVideo id="outgoing-video" />
         </Videos>
         <div>
-          <Button disabled={this.state.activeRoom !== null} onClick={this.beginConsult}>Begin consult</Button>
-          <Button disabled={this.state.activeRoom === null} onClick={this.endConsult}>End consult</Button>
+          {
+            this.state.userDetails ?
+              this.state.userDetails.role === 'Doctor'
+              ? this.renderDoctor(this.state.userConsults)
+              : this.renderPatient(this.state.userConsults)
+            : 'Loading user..'
+          }
         </div>
       </Main>
     );
