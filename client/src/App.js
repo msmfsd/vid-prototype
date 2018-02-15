@@ -68,6 +68,7 @@ class App extends Component {
     roomName: null,
     userDetails: null,
     userConsults: null,
+    liveConsultId: null,
   };
 
   componentDidMount() {
@@ -77,15 +78,21 @@ class App extends Component {
     this.getUserById(currentUserId)
       .then(user => {
         const id = user._id;
-        this.apiGetConsults()
-          .then(consults => {
-            const userConsults = consults.filter(obj => user.role === 'Doctor' ? obj.doctorId === id : obj.patientId === id)
-            this.setState({
-              userDetails: user,
-              userConsults: userConsults,
-            });
-          })
-          .catch(err => console.log(err));
+        this.setState({ userDetails: user });
+        setInterval(() => {
+          this.apiGetConsults()
+            .then(consults => {
+              const userConsults = consults.filter(
+                obj => user.role === 'Doctor'
+                ? obj.doctorId === id
+                : obj.patientId === id
+              );
+              if (JSON.stringify(this.state.userConsults) !== JSON.stringify(userConsults)) {
+                this.setState({userConsults: userConsults});
+              }
+            })
+            .catch(err => console.log(err));
+        }, 1200);
       })
       .catch(err => console.log(err));
     // twilio token
@@ -125,13 +132,6 @@ class App extends Component {
   }
 
   updateConsultStatus = async (id, status) => {
-    /*
-      this.updateConsultStatus(myConsults[2]._id, 'COMPLETED')
-        .then(result => {
-          console.log('update consult result', result);
-        })
-        .catch(err => console.log(err))
-    */
     const opts = {
       method: 'put',
       headers: { 'Content-type': 'application/json' },
@@ -151,16 +151,17 @@ class App extends Component {
     return body;
   }
 
-  setActiveRoom = (state) => {
-    this.setState({ activeRoom: state });
-  }
-
   // Successfully connected!
   roomJoined = (room) => {
-    const {previewTracks} = this.state
+    const {previewTracks, liveConsultId} = this.state
 
-    this.setActiveRoom(room)
+    this.setState({ activeRoom: room });
     console.log("Joined as '" + this.state.identity + "'");
+
+    // update consult
+    this.updateConsultStatus(liveConsultId, 'ACTIVE')
+      .then(result => { console.log('update consult result', result); })
+      .catch(err => console.log(err))
 
     // Attach LocalParticipant's Tracks, if not already attached.
     let outgoingPreviewContainer = document.getElementById('outgoing-video');
@@ -205,13 +206,15 @@ class App extends Component {
     room.on('disconnected', () => {
       console.log('Left');
       if (previewTracks) {
-        previewTracks.forEach((track) => {
-          track.stop();
-        });
+        previewTracks.forEach((track) => { track.stop(); });
       }
       detachParticipantTracks(room.localParticipant);
       room.participants.forEach(detachParticipantTracks);
-      that.setActiveRoom(null)
+      that.setState({ activeRoom: null, liveConsultId: null });
+      // update consult
+      this.updateConsultStatus(liveConsultId, 'COMPLETED')
+        .then(result => { console.log('update consult result', result); })
+        .catch(err => console.log(err))
     });
   }
 
@@ -219,8 +222,10 @@ class App extends Component {
     //event.preventDefault();
     const {previewTracks, token} = this.state;
     const roomName = `room-${consultId}`;
-
-    this.setState({ roomName: roomName });
+    this.setState({
+      roomName: roomName,
+      liveConsultId: consultId,
+    });
     console.log("Joining room '" + roomName + "'...");
 
     const connectOptions = {
@@ -233,7 +238,6 @@ class App extends Component {
     }
 
     // VideoCodecs=H264
-    console.log('TwilioVideo',TwilioVideo);
     // Join the Room with the token from the server and the
     // LocalParticipant's Tracks.
     TwilioVideo.connect(token, connectOptions).then(this.roomJoined, (error) => {
@@ -249,52 +253,58 @@ class App extends Component {
 
   renderDoctor = (userConsults) => {
     let nodes = (<p>Loading doctor consults..</p>);
-    if (userConsults.length) {
+    if (!!userConsults) {
       nodes = userConsults.map(consult =>
-        (<h2 key={consult._id}>
+        (<p style={{opacity: consult.status === 'COMPLETED' ? 0.4 : 1}} key={consult._id}>
           Consult with patient {consult.patientId} | status {consult.status}:
-          <Button
-            disabled={consult.status !== ('SCHEDULED' || 'ACTIVE')}
-            onClick={() => {
-              this.beginConsult(consult._id)
-            }}
+          {(consult.status === 'SCHEDULED' || consult.status === 'ACTIVE') && (
+            <Button
+              onClick={() => {
+                if (consult.status === 'SCHEDULED') this.beginConsult(consult._id)
+                else if (consult.status === 'ACTIVE') this.endConsult()
+              }}
             >{consult.status === 'SCHEDULED' ? 'Begin consult' : 'End consult'}</Button>
-        </h2>));
+          )}
+        </p>));
     }
     return nodes;
   }
 
   renderPatient = (userConsults) => {
     let nodes = (<p>Loading patient consults..</p>);
-    if (userConsults.length) {
+    if (!!userConsults) {
       nodes = userConsults.map(consult =>
-        (<h2 key={consult._id}>
+        (<p style={{opacity: consult.status === 'COMPLETED' ? 0.6 : 1}} key={consult._id}>
           Consult with doctor {consult.doctorId} | status {consult.status}:
-          <Button
-            disabled={consult.status !== 'ACTIVE'}
-            onClick={() => {
-              this.beginConsult(consult._id)
-            }}
+          {consult.status === 'ACTIVE' && (
+            <Button
+              disabled={consult.status !== 'ACTIVE'}
+              onClick={() => {
+                this.beginConsult(consult._id)
+              }}
             >Join consult</Button>
-        </h2>));
+          )}
+        </p>));
     }
     return nodes;
   }
 
   render() {
     console.log(this.state);
+    const {userDetails, userConsults} = this.state;
     return (
       <Main>
+        {userDetails && (<h3>{userDetails.role}</h3>)}
         <Videos>
           <InComingVideo id="incoming-video" />
           <OutGoingVideo id="outgoing-video" />
         </Videos>
         <div>
           {
-            this.state.userDetails ?
-              this.state.userDetails.role === 'Doctor'
-              ? this.renderDoctor(this.state.userConsults)
-              : this.renderPatient(this.state.userConsults)
+            userDetails ?
+              userDetails.role === 'Doctor'
+              ? this.renderDoctor(userConsults)
+              : this.renderPatient(userConsults)
             : 'Loading user..'
           }
         </div>
