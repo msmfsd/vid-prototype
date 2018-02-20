@@ -37,9 +37,27 @@ const Button = styled.button`
   cursor: pointer;
   &:disabled {
     cursor: default;
-    opacity: 0.4;
+    opacity: 0.8;
   }
 `;
+
+const getNameFromId = (id) => {
+  let name = 'Unknown';
+  switch(id) {
+    case '5a83a3d9bd78b8bee97fee47':
+      name = 'Julius Hibbert';
+      break;
+    case '5a83a3d9bd78b8bee97fee48':
+      name = 'Barney Gumble';
+      break;
+    case '5a83a3d9bd78b8bee97fee49':
+      name = 'Rachel Jordan';
+      break;
+    default:
+      name = 'Unknown';
+  }
+  return name;
+}
 
 const Consults = ({
   role,
@@ -47,6 +65,7 @@ const Consults = ({
   liveConsult,
   beginConsult,
   endConsult,
+  loading,
 }) => (
   <Panel>
     {!consults && <Row>Loading consults..</Row>}
@@ -55,14 +74,16 @@ const Consults = ({
         <Span>{consult.status}</Span>
         <Span>
           Consult with <b>{
-            role === 'Doctor'
-            ? consult.patientId
-            : consult.doctorId}</b>
+            role === 'Patient'
+            ? `Dr ${getNameFromId(consult.doctorId)}`
+            : getNameFromId(consult.patientId)
+          }</b>
         </Span>
         <Span>{moment(consult.dateScheduled).format('LLL')}</Span>
         <Span>
           {(consult.status === 'SCHEDULED' || consult.status === 'ACTIVE') && role === 'Doctor' && (
             <Button
+              disabled={loading}
               onClick={() => {
                 if (consult.status === 'SCHEDULED') beginConsult(consult._id)
                 else if (consult.status === 'ACTIVE') endConsult()
@@ -71,6 +92,7 @@ const Consults = ({
           )}
           {!liveConsult && consult.status === 'ACTIVE' && role === 'Patient' && (
             <Button
+              disabled={loading}
               onClick={() => {
                 beginConsult(consult._id)
               }}

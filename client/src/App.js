@@ -58,9 +58,15 @@ class App extends Component {
     userDetails: null,
     userConsults: null,
     liveConsultId: null,
+    loadingConsult: false,
   };
 
   componentDidMount() {
+    ///////////////////////////
+    //this.updateConsultStatus('5a83a48393c9f0bf062df9da', 'SCHEDULED').then(result => { console.log('update consult result'); })
+    //this.updateConsultStatus('5a83a5177b2ebabf2f217579', 'SCHEDULED').then(result => { console.log('update consult result'); })
+    //////////////////////////
+
     // get logged in user
     const currentUserId = this.getCurrentUser();
     // get user details
@@ -81,7 +87,7 @@ class App extends Component {
               }
             })
             .catch(err => console.log(err));
-        }, 1200);
+        }, 800);
       })
       .catch(err => console.log(err));
     // twilio token
@@ -144,7 +150,10 @@ class App extends Component {
   roomJoined = (room) => {
     const {userDetails, previewTracks, liveConsultId} = this.state
 
-    this.setState({ activeRoom: room });
+    this.setState({
+      activeRoom: room,
+      loadingConsult: false,
+    });
     console.log("Joined as '" + this.state.identity + "'");
 
     // update consult
@@ -203,7 +212,11 @@ class App extends Component {
       }
       detachParticipantTracks(room.localParticipant);
       room.participants.forEach(detachParticipantTracks);
-      that.setState({ activeRoom: null, liveConsultId: null });
+      that.setState({
+        activeRoom: null,
+        liveConsultId: null,
+        loadingConsult: false,
+      });
       // update consult
       this.updateConsultStatus(liveConsultId, 'COMPLETED')
         .then(result => { console.log('update consult result', result); })
@@ -218,6 +231,7 @@ class App extends Component {
     this.setState({
       roomName: roomName,
       liveConsultId: consultId,
+      loadingConsult: true,
     });
     console.log("Joining room '" + roomName + "'...");
 
@@ -241,15 +255,18 @@ class App extends Component {
   endConsult = () => {
     //event.preventDefault();
     console.log('Leaving room...');
+    this.setState({
+      loadingConsult: true,
+    });
     this.state.activeRoom.disconnect();
   }
 
   render() {
     //console.log(this.state);
-    const {userDetails, userConsults, liveConsultId} = this.state;
+    const {userDetails, userConsults, liveConsultId, loadingConsult} = this.state;
     return (
       <Main>
-        {userDetails && (<h3>{userDetails.role}</h3>)}
+        {userDetails && (<h3>{userDetails.role === 'Doctor' ? `Dr ${userDetails.name}` : userDetails.name}</h3>)}
         <Videos>
           <InComingVideo id="incoming-video" />
           <OutGoingVideo id="outgoing-video" />
@@ -262,6 +279,7 @@ class App extends Component {
               consults={userConsults}
               beginConsult={this.beginConsult}
               endConsult={this.endConsult}
+              loading={loadingConsult}
             />)
           : 'Loading user..'
         }
