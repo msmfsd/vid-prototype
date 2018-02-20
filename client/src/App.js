@@ -7,6 +7,7 @@ import {
   detachTracks,
   detachParticipantTracks
 } from './twilio-tracks';
+import Consults from './Consults';
 
 const Main = styled.div`
   display: flex;
@@ -20,18 +21,6 @@ const Main = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-`;
-
-const Button = styled.button`
-  background-color: #fff;
-  color: #444;
-  font-size: 18px;
-  margin-right: 5px;
-  cursor: pointer;
-  &:disabled {
-    cursor: default;
-    opacity: 0.4;
-  }
 `;
 
 const Videos = styled.div`
@@ -96,7 +85,7 @@ class App extends Component {
       })
       .catch(err => console.log(err));
     // twilio token
-    this.apiGetToken()
+    this.apiGetToken(currentUserId)
       .then(res => {
         this.setState({
           identity: res.identity,
@@ -143,9 +132,9 @@ class App extends Component {
     return body;
   }
 
-  apiGetToken = async () => {
+  apiGetToken = async (id) => {
     const opts = { method: 'get' };
-    const response = await fetch('/api/token', opts);
+    const response = await fetch(`/api/token/${id}`, opts);
     const body = await response.json();
     if (response.status !== 200) throw Error(body.message);
     return body;
@@ -153,7 +142,7 @@ class App extends Component {
 
   // Successfully connected!
   roomJoined = (room) => {
-    const {previewTracks, liveConsultId} = this.state
+    const {userDetails, previewTracks, liveConsultId} = this.state
 
     this.setState({ activeRoom: room });
     console.log("Joined as '" + this.state.identity + "'");
@@ -198,6 +187,10 @@ class App extends Component {
     room.on('participantDisconnected', (participant) => {
       console.log("Participant '" + participant.identity + "' left the room");
       detachParticipantTracks(participant);
+      // if patient then dr has disconnected
+      if (userDetails.role === 'Patient') {
+        this.endConsult();
+      }
     });
 
     // Once the LocalParticipant leaves the room, detach the Tracks
@@ -251,47 +244,9 @@ class App extends Component {
     this.state.activeRoom.disconnect();
   }
 
-  renderDoctor = (userConsults) => {
-    let nodes = (<p>Loading doctor consults..</p>);
-    if (!!userConsults) {
-      nodes = userConsults.map(consult =>
-        (<p style={{opacity: consult.status === 'COMPLETED' ? 0.4 : 1}} key={consult._id}>
-          Consult with patient {consult.patientId} | status {consult.status}:
-          {(consult.status === 'SCHEDULED' || consult.status === 'ACTIVE') && (
-            <Button
-              onClick={() => {
-                if (consult.status === 'SCHEDULED') this.beginConsult(consult._id)
-                else if (consult.status === 'ACTIVE') this.endConsult()
-              }}
-            >{consult.status === 'SCHEDULED' ? 'Begin consult' : 'End consult'}</Button>
-          )}
-        </p>));
-    }
-    return nodes;
-  }
-
-  renderPatient = (userConsults) => {
-    let nodes = (<p>Loading patient consults..</p>);
-    if (!!userConsults) {
-      nodes = userConsults.map(consult =>
-        (<p style={{opacity: consult.status === 'COMPLETED' ? 0.6 : 1}} key={consult._id}>
-          Consult with doctor {consult.doctorId} | status {consult.status}:
-          {consult.status === 'ACTIVE' && (
-            <Button
-              disabled={consult.status !== 'ACTIVE'}
-              onClick={() => {
-                this.beginConsult(consult._id)
-              }}
-            >Join consult</Button>
-          )}
-        </p>));
-    }
-    return nodes;
-  }
-
   render() {
-    console.log(this.state);
-    const {userDetails, userConsults} = this.state;
+    //console.log(this.state);
+    const {userDetails, userConsults, liveConsultId} = this.state;
     return (
       <Main>
         {userDetails && (<h3>{userDetails.role}</h3>)}
@@ -299,15 +254,17 @@ class App extends Component {
           <InComingVideo id="incoming-video" />
           <OutGoingVideo id="outgoing-video" />
         </Videos>
-        <div>
-          {
-            userDetails ?
-              userDetails.role === 'Doctor'
-              ? this.renderDoctor(userConsults)
-              : this.renderPatient(userConsults)
-            : 'Loading user..'
-          }
-        </div>
+        {
+          userDetails ?
+            (<Consults
+              role={userDetails.role}
+              liveConsult={!!liveConsultId}
+              consults={userConsults}
+              beginConsult={this.beginConsult}
+              endConsult={this.endConsult}
+            />)
+          : 'Loading user..'
+        }
       </Main>
     );
   }

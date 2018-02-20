@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import http from 'http';
-import path from 'path';
+//import http from 'http';
+//import path from 'path';
 import twilio from 'twilio';
 import express from 'express';
 import bodyParser from 'body-parser'
@@ -8,7 +8,6 @@ import dotenv from 'dotenv'
 import {startDatabase, initDatabase} from './server/db';
 import {getUsers, getUserById} from './server/routes/User'
 import {getConsults, getConsultById, updateConsultStatusById} from './server/routes/Consult'
-import randomName from './randomname';
 
 // init
 dotenv.load();
@@ -37,8 +36,8 @@ app.put('/api/consult/:id', updateConsultStatusById);
  * username for the client requesting a token, and takes a device ID as a query
  * parameter.
  */
-app.get('/api/token', (request, response) => {
-  const identity = randomName();
+app.get('/api/token/:id', (req, res) => {
+  const identity = req.params.id.toString();
 
   // Create an access token which we will sign and return to the client,
   // containing the grant we just created.
@@ -56,7 +55,7 @@ app.get('/api/token', (request, response) => {
   token.addGrant(grant);
 
   // Serialize the token to a JWT string and include it in a JSON response.
-  response.send({
+  res.send({
     identity: identity,
     token: token.toJwt()
   });
