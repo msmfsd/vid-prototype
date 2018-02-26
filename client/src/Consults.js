@@ -44,14 +44,14 @@ const Button = styled.button`
 const getNameFromId = (id) => {
   let name = 'Unknown';
   switch(id) {
-    case '5a83a3d9bd78b8bee97fee47':
+    case '5a8ccc812cfda026ed270502':
       name = 'Julius Hibbert';
       break;
-    case '5a83a3d9bd78b8bee97fee48':
+    case '5a8ccc812cfda026ed270503':
       name = 'Barney Gumble';
       break;
-    case '5a83a3d9bd78b8bee97fee49':
-      name = 'Rachel Jordan';
+    case '5a8ccc812cfda026ed270504':
+      name = 'Marge Simpson';
       break;
     default:
       name = 'Unknown';

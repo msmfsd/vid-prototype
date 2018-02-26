@@ -62,11 +62,6 @@ class App extends Component {
   };
 
   componentDidMount() {
-    ///////////////////////////
-    //this.updateConsultStatus('5a83a48393c9f0bf062df9da', 'SCHEDULED').then(result => { console.log('update consult result'); })
-    //this.updateConsultStatus('5a83a5177b2ebabf2f217579', 'SCHEDULED').then(result => { console.log('update consult result'); })
-    //////////////////////////
-
     // get logged in user
     const currentUserId = this.getCurrentUser();
     // get user details
